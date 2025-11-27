@@ -5,7 +5,84 @@
 // Este código inicial serve como base para o desenvolvimento do sistema de controle de peças.
 // Use as instruções de cada nível para desenvolver o desafio.
 
-int main() {
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_FILA 5
+
+// Estrutura que representa uma peça
+typedef struct
+{
+    int id;
+    char nome[2]; // Ex: "I", "O", "T", "L"
+} Peca;
+
+// Fila circular
+Peca fila[MAX_FILA];
+int frente = 0;
+int tras = 0;
+int quantidade = 0;
+int contadorId = 1;
+
+// Função para gerar automaticamente uma peça
+Peca gerarPeca()
+{
+    Peca nova;
+    nova.id = contadorId++;
+    char tipos[4][2] = {"I", "O", "T", "L"};
+    strcpy(nova.nome, tipos[rand() % 4]);
+    return nova;
+}
+
+// Inserir peça na fila (enqueue)
+void inserirPeca()
+{
+    if (quantidade == MAX_FILA)
+    {
+        printf("Fila cheia! Não é possível inserir.\n");
+        return;
+    }
+    fila[tras] = gerarPeca();
+    tras = (tras + 1) % MAX_FILA;
+    quantidade++;
+}
+
+// Remover peça da fila (dequeue)
+void jogarPeca()
+{
+    if (quantidade == 0)
+    {
+        printf("Fila vazia! Nenhuma peça para jogar.\n");
+        return;
+    }
+    Peca jogada = fila[frente];
+    printf("Peça jogada: ID=%d, Tipo=%s\n", jogada.id, jogada.nome);
+    frente = (frente + 1) % MAX_FILA;
+    quantidade--;
+
+    // Inserir automaticamente uma nova peça
+    inserirPeca();
+}
+
+// Visualizar fila
+void visualizarFila()
+{
+    if (quantidade == 0)
+    {
+        printf("Fila vazia.\n");
+        return;
+    }
+    printf("\n===== Fila de Peças Futuras =====\n");
+    int i, idx;
+    for (i = 0, idx = frente; i < quantidade; i++, idx = (idx + 1) % MAX_FILA)
+    {
+        printf("Posição %d -> ID=%d, Tipo=%s\n", i, fila[idx].id, fila[idx].nome);
+    }
+    printf("=================================\n\n");
+}
+
+int main()
+{
 
     // 🧩 Nível Novato: Fila de Peças Futuras
     //
@@ -19,8 +96,6 @@ int main() {
     //      0 - Sair
     // - A cada remoção, insira uma nova peça ao final da fila.
 
-
-
     // 🧠 Nível Aventureiro: Adição da Pilha de Reserva
     //
     // - Implemente uma pilha linear com capacidade para 3 peças.
@@ -31,7 +106,6 @@ int main() {
     //      3 - Usar peça da reserva (remover do topo da pilha)
     // - Exiba a pilha junto com a fila após cada ação com mostrarPilha().
     // - Mantenha a fila sempre com 5 peças (repondo com gerarPeca()).
-
 
     // 🔄 Nível Mestre: Integração Estratégica entre Fila e Pilha
     //
@@ -49,8 +123,44 @@ int main() {
     // - O menu deve ficar assim:
     //      4 - Trocar peça da frente com topo da pilha
     //      5 - Trocar 3 primeiros da fila com os 3 da pilha
+    
+    int opcao;
 
+    // Inicializar fila com 5 peças
+    for (int i = 0; i < MAX_FILA; i++)
+    {
+        inserirPeca();
+    }
+
+    do
+    {
+        printf("===== MENU =====\n");
+        printf("1. Jogar peça (dequeue)\n");
+        printf("2. Inserir nova peça (enqueue)\n");
+        printf("3. Visualizar fila\n");
+        printf("0. Sair\n");
+        printf("Escolha uma opção: ");
+        scanf("%d", &opcao);
+
+        switch (opcao)
+        {
+        case 1:
+            jogarPeca();
+            break;
+        case 2:
+            inserirPeca();
+            break;
+        case 3:
+            visualizarFila();
+            break;
+        case 0:
+            printf("Saindo...\n");
+            break;
+        default:
+            printf("Opção inválida!\n");
+        }
+    } while (opcao != 0);
 
     return 0;
-}
 
+}
