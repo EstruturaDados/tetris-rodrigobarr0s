@@ -10,6 +10,7 @@
 
 #define MAX_FILA 5
 #define MAX_PILHA 3
+#define MAX_HISTORICO 10
 
 // Estrutura que representa uma peça
 typedef struct
@@ -17,6 +18,13 @@ typedef struct
     int id;
     char nome[2]; // Ex: "I", "O", "T", "L"
 } Peca;
+
+// Histórico para desfazer última jogada
+typedef struct
+{
+    char acao[20];
+    Peca peca;
+} Historico;
 
 // Fila circular
 Peca fila[MAX_FILA];
@@ -28,6 +36,10 @@ int contadorId = 1;
 // Pilha linear
 Peca pilha[MAX_PILHA];
 int topo = -1;
+
+// Histórico de ações
+Historico historico[MAX_HISTORICO];
+int topoHistorico = -1;
 
 // Função para gerar automaticamente uma peça
 Peca gerarPeca()
@@ -43,10 +55,7 @@ Peca gerarPeca()
 void inserirPeca()
 {
     if (quantidadeFila == MAX_FILA)
-    {
-        printf("Fila cheia! Não é possível inserir.\n");
         return;
-    }
     fila[tras] = gerarPeca();
     tras = (tras + 1) % MAX_FILA;
     quantidadeFila++;
@@ -57,7 +66,6 @@ Peca jogarPeca()
 {
     if (quantidadeFila == 0)
     {
-        printf("Fila vazia! Nenhuma peça para jogar.\n");
         Peca vazio = {-1, " "};
         return vazio;
     }
@@ -65,8 +73,15 @@ Peca jogarPeca()
     frente = (frente + 1) % MAX_FILA;
     quantidadeFila--;
 
-    // Inserir automaticamente uma nova peça
     inserirPeca();
+
+    // Registrar no histórico
+    if (topoHistorico < MAX_HISTORICO - 1)
+    {
+        topoHistorico++;
+        strcpy(historico[topoHistorico].acao, "jogar");
+        historico[topoHistorico].peca = jogada;
+    }
 
     return jogada;
 }
@@ -74,11 +89,6 @@ Peca jogarPeca()
 // Visualizar fila
 void visualizarFila()
 {
-    if (quantidadeFila == 0)
-    {
-        printf("Fila vazia.\n");
-        return;
-    }
     printf("\n===== Fila de Peças Futuras =====\n");
     int i, idx;
     for (i = 0, idx = frente; i < quantidadeFila; i++, idx = (idx + 1) % MAX_FILA)
@@ -91,11 +101,6 @@ void visualizarFila()
 // Visualizar pilha
 void visualizarPilha()
 {
-    if (topo == -1)
-    {
-        printf("Pilha vazia.\n");
-        return;
-    }
     printf("\n===== Pilha de Peças Reservadas =====\n");
     for (int i = topo; i >= 0; i--)
     {
@@ -107,33 +112,100 @@ void visualizarPilha()
 // Reservar peça (push)
 void reservarPeca()
 {
-    if (topo == MAX_PILHA - 1)
-    {
-        printf("Pilha cheia! Não é possível reservar mais peças.\n");
+    if (topo == MAX_PILHA - 1 || quantidadeFila == 0)
         return;
-    }
-    if (quantidadeFila == 0)
-    {
-        printf("Fila vazia! Nenhuma peça para reservar.\n");
-        return;
-    }
     Peca reservada = jogarPeca();
     topo++;
     pilha[topo] = reservada;
-    printf("Peça reservada: ID=%d, Tipo=%s\n", reservada.id, reservada.nome);
+
+    // Registrar no histórico
+    if (topoHistorico < MAX_HISTORICO - 1)
+    {
+        topoHistorico++;
+        strcpy(historico[topoHistorico].acao, "reservar");
+        historico[topoHistorico].peca = reservada;
+    }
 }
 
 // Usar peça reservada (pop)
 void usarReservada()
 {
     if (topo == -1)
-    {
-        printf("Pilha vazia! Nenhuma peça reservada para usar.\n");
         return;
-    }
     Peca usada = pilha[topo];
     topo--;
+
+    // Registrar no histórico
+    if (topoHistorico < MAX_HISTORICO - 1)
+    {
+        topoHistorico++;
+        strcpy(historico[topoHistorico].acao, "usar");
+        historico[topoHistorico].peca = usada;
+    }
+
     printf("Peça usada da reserva: ID=%d, Tipo=%s\n", usada.id, usada.nome);
+}
+
+// Trocar peça do topo da pilha com a da frente da fila
+void trocarPeca()
+{
+    if (topo == -1 || quantidadeFila == 0)
+        return;
+    Peca temp = pilha[topo];
+    pilha[topo] = fila[frente];
+    fila[frente] = temp;
+
+    printf("Troca realizada entre topo da pilha e frente da fila.\n");
+}
+
+// Desfazer última jogada
+void desfazer()
+{
+    if (topoHistorico == -1)
+    {
+        printf("Nenhuma ação para desfazer.\n");
+        return;
+    }
+
+    Historico ultima = historico[topoHistorico];
+    topoHistorico--;
+
+    if (strcmp(ultima.acao, "jogar") == 0)
+    {
+        // Recoloca peça na frente da fila
+        frente = (frente - 1 + MAX_FILA) % MAX_FILA;
+        fila[frente] = ultima.peca;
+        quantidadeFila++;
+        printf("Desfeito: peça %s (ID=%d) voltou para a fila.\n", ultima.peca.nome, ultima.peca.id);
+    }
+    else if (strcmp(ultima.acao, "reservar") == 0)
+    {
+        // Remove da pilha
+        if (topo >= 0)
+            topo--;
+        printf("Desfeito: peça %s (ID=%d) removida da pilha.\n", ultima.peca.nome, ultima.peca.id);
+    }
+    else if (strcmp(ultima.acao, "usar") == 0)
+    {
+        // Recoloca na pilha
+        topo++;
+        pilha[topo] = ultima.peca;
+        printf("Desfeito: peça %s (ID=%d) voltou para a pilha.\n", ultima.peca.nome, ultima.peca.id);
+    }
+}
+
+// Inverter fila com pilha
+void inverterFilaPilha()
+{
+    int i = 0;
+    while (quantidadeFila > 0 && topo < MAX_PILHA - 1)
+    {
+        Peca p = jogarPeca();
+        topo++;
+        pilha[topo] = p;
+        i++;
+    }
+    printf("Inversão realizada: %d peças movidas da fila para a pilha.\n", i);
 }
 
 // Função principal com menu interativo
@@ -194,6 +266,9 @@ int main()
         printf("1. Jogar peça\n");
         printf("2. Reservar peça\n");
         printf("3. Usar peça reservada\n");
+        printf("4. Trocar peça do topo da pilha com a da frente da fila\n");
+        printf("5. Desfazer última jogada\n");
+        printf("6. Inverter fila com pilha\n");
         printf("0. Sair\n");
         printf("Escolha uma opção: ");
         scanf("%d", &opcao);
@@ -212,6 +287,15 @@ int main()
             break;
         case 3:
             usarReservada();
+            break;
+        case 4:
+            trocarPeca();
+            break;
+        case 5:
+            desfazer();
+            break;
+        case 6:
+            inverterFilaPilha();
             break;
         case 0:
             printf("Saindo...\n");
