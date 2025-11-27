@@ -9,6 +9,7 @@
 #include <string.h>
 
 #define MAX_FILA 5
+#define MAX_PILHA 3
 
 // Estrutura que representa uma peça
 typedef struct
@@ -21,8 +22,12 @@ typedef struct
 Peca fila[MAX_FILA];
 int frente = 0;
 int tras = 0;
-int quantidade = 0;
+int quantidadeFila = 0;
 int contadorId = 1;
+
+// Pilha linear
+Peca pilha[MAX_PILHA];
+int topo = -1;
 
 // Função para gerar automaticamente uma peça
 Peca gerarPeca()
@@ -37,50 +42,101 @@ Peca gerarPeca()
 // Inserir peça na fila (enqueue)
 void inserirPeca()
 {
-    if (quantidade == MAX_FILA)
+    if (quantidadeFila == MAX_FILA)
     {
         printf("Fila cheia! Não é possível inserir.\n");
         return;
     }
     fila[tras] = gerarPeca();
     tras = (tras + 1) % MAX_FILA;
-    quantidade++;
+    quantidadeFila++;
 }
 
 // Remover peça da fila (dequeue)
-void jogarPeca()
+Peca jogarPeca()
 {
-    if (quantidade == 0)
+    if (quantidadeFila == 0)
     {
         printf("Fila vazia! Nenhuma peça para jogar.\n");
-        return;
+        Peca vazio = {-1, " "};
+        return vazio;
     }
     Peca jogada = fila[frente];
-    printf("Peça jogada: ID=%d, Tipo=%s\n", jogada.id, jogada.nome);
     frente = (frente + 1) % MAX_FILA;
-    quantidade--;
+    quantidadeFila--;
 
     // Inserir automaticamente uma nova peça
     inserirPeca();
+
+    return jogada;
 }
 
 // Visualizar fila
 void visualizarFila()
 {
-    if (quantidade == 0)
+    if (quantidadeFila == 0)
     {
         printf("Fila vazia.\n");
         return;
     }
     printf("\n===== Fila de Peças Futuras =====\n");
     int i, idx;
-    for (i = 0, idx = frente; i < quantidade; i++, idx = (idx + 1) % MAX_FILA)
+    for (i = 0, idx = frente; i < quantidadeFila; i++, idx = (idx + 1) % MAX_FILA)
     {
         printf("Posição %d -> ID=%d, Tipo=%s\n", i, fila[idx].id, fila[idx].nome);
     }
     printf("=================================\n\n");
 }
 
+// Visualizar pilha
+void visualizarPilha()
+{
+    if (topo == -1)
+    {
+        printf("Pilha vazia.\n");
+        return;
+    }
+    printf("\n===== Pilha de Peças Reservadas =====\n");
+    for (int i = topo; i >= 0; i--)
+    {
+        printf("Topo-%d -> ID=%d, Tipo=%s\n", i, pilha[i].id, pilha[i].nome);
+    }
+    printf("=====================================\n\n");
+}
+
+// Reservar peça (push)
+void reservarPeca()
+{
+    if (topo == MAX_PILHA - 1)
+    {
+        printf("Pilha cheia! Não é possível reservar mais peças.\n");
+        return;
+    }
+    if (quantidadeFila == 0)
+    {
+        printf("Fila vazia! Nenhuma peça para reservar.\n");
+        return;
+    }
+    Peca reservada = jogarPeca();
+    topo++;
+    pilha[topo] = reservada;
+    printf("Peça reservada: ID=%d, Tipo=%s\n", reservada.id, reservada.nome);
+}
+
+// Usar peça reservada (pop)
+void usarReservada()
+{
+    if (topo == -1)
+    {
+        printf("Pilha vazia! Nenhuma peça reservada para usar.\n");
+        return;
+    }
+    Peca usada = pilha[topo];
+    topo--;
+    printf("Peça usada da reserva: ID=%d, Tipo=%s\n", usada.id, usada.nome);
+}
+
+// Função principal com menu interativo
 int main()
 {
 
@@ -123,7 +179,7 @@ int main()
     // - O menu deve ficar assim:
     //      4 - Trocar peça da frente com topo da pilha
     //      5 - Trocar 3 primeiros da fila com os 3 da pilha
-    
+
     int opcao;
 
     // Inicializar fila com 5 peças
@@ -135,9 +191,9 @@ int main()
     do
     {
         printf("===== MENU =====\n");
-        printf("1. Jogar peça (dequeue)\n");
-        printf("2. Inserir nova peça (enqueue)\n");
-        printf("3. Visualizar fila\n");
+        printf("1. Jogar peça\n");
+        printf("2. Reservar peça\n");
+        printf("3. Usar peça reservada\n");
         printf("0. Sair\n");
         printf("Escolha uma opção: ");
         scanf("%d", &opcao);
@@ -145,13 +201,17 @@ int main()
         switch (opcao)
         {
         case 1:
-            jogarPeca();
+        {
+            Peca jogada = jogarPeca();
+            if (jogada.id != -1)
+                printf("Peça jogada: ID=%d, Tipo=%s\n", jogada.id, jogada.nome);
             break;
+        }
         case 2:
-            inserirPeca();
+            reservarPeca();
             break;
         case 3:
-            visualizarFila();
+            usarReservada();
             break;
         case 0:
             printf("Saindo...\n");
@@ -159,8 +219,12 @@ int main()
         default:
             printf("Opção inválida!\n");
         }
+
+        // Mostrar estado atual
+        visualizarFila();
+        visualizarPilha();
+
     } while (opcao != 0);
 
     return 0;
-
 }
